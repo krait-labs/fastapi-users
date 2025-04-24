@@ -4,9 +4,10 @@ from typing import Optional
 import httpx
 import pytest
 import pytest_asyncio
-from fastapi import Depends, FastAPI, status
+from fastapi import Depends, FastAPI, HTTPException, status
 
 from fastapi_users import FastAPIUsers, schemas
+from fastapi_users.auth import get_current_user_info
 from tests.conftest import IDType, User, UserCreate, UserModel, UserUpdate
 
 
@@ -33,9 +34,19 @@ async def test_app_client(
         fastapi_users.get_oauth_associate_router(oauth_client, User, secret)
     )
 
-    @app.delete("/users/me")
-    def custom_users_route():
-        return None
+    @app.delete("/users/{user_id}")
+    def delete_user(user_id: int, current_user: User = Depends(get_current_user_info)):
+        user_to_delete = db.query(User).filter(User.id == user_id).first()
+
+        if not user_to_delete:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        if current_user.id != user_id:
+            db.delete(user_to_delete)
+            db.commit()
+            return {"message": f"User {user_id} deleted successfully"}
+
+        raise HTTPException(status_code=403, detail="Forbidden")
 
     app.include_router(
         fastapi_users.get_users_router(User, UserUpdate), prefix="/users"
