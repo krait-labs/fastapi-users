@@ -183,7 +183,6 @@ class Authenticator(Generic[models.UP, models.ID]):
             status_code = status.HTTP_403_FORBIDDEN
             if active and not user.is_active:
                 status_code = status.HTTP_401_UNAUTHORIZED
-                user = None
             elif (
                 verified and not user.is_verified or superuser and not user.is_superuser
             ):
