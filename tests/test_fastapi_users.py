@@ -8,6 +8,7 @@ from fastapi import Depends, FastAPI, HTTPException, status
 
 from fastapi_users import FastAPIUsers, schemas
 from fastapi_users.auth import get_current_user_info
+from fastapi_users.models import User as UserAuth
 from tests.conftest import IDType, User, UserCreate, UserModel, UserUpdate
 
 
@@ -35,13 +36,15 @@ async def test_app_client(
     )
 
     @app.delete("/users/{user_id}")
-    def delete_user(user_id: int, current_user: User = Depends(get_current_user_info)):
+    def delete_user(
+        user_id: int, current_user: UserAuth = Depends(get_current_user_info)
+    ):
         user_to_delete = db.query(User).filter(User.id == user_id).first()
 
         if not user_to_delete:
             raise HTTPException(status_code=404, detail="User not found")
 
-        if current_user.id != user_id:
+        if current_user.id != user_id or current_user.is_admin:
             db.delete(user_to_delete)
             db.commit()
             return {"message": f"User {user_id} deleted successfully"}
